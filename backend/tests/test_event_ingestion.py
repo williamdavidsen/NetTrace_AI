@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_session
 from app.main import create_app
-from app.models import PacketEvent, Scan
+from app.models import Alert, PacketEvent, Scan
 
 
 def test_event_ingestion_saves_valid_payload(db_session: Session) -> None:
@@ -76,6 +76,42 @@ def test_event_ingestion_rejects_unknown_scan(db_session: Session) -> None:
     response = client.post("/api/v1/events", json=payload)
 
     assert response.status_code == 404
+
+
+def test_event_ingestion_creates_alert_for_sensitive_port(db_session: Session) -> None:
+    scan = Scan(target_name="sensitive-port-ingestion", status="running")
+    db_session.add(scan)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    payload = _valid_event_payload(scan.id)
+    payload["destination_port"] = 22
+
+    response = client.post("/api/v1/events", json=payload)
+
+    assert response.status_code == 201
+    saved_alert = db_session.scalar(select(Alert).where(Alert.scan_id == scan.id))
+    assert saved_alert is not None
+    assert saved_alert.rule_name == "sensitive_port"
+    assert saved_alert.source_ip == "192.168.1.10"
+
+
+def test_event_ingestion_creates_port_scan_alert_at_threshold(db_session: Session) -> None:
+    scan = Scan(target_name="port-scan-ingestion", status="running")
+    db_session.add(scan)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    for port in [80, 81, 82, 83, 84]:
+        payload = _valid_event_payload(scan.id)
+        payload["source_ip"] = "10.0.0.90"
+        payload["destination_port"] = port
+        response = client.post("/api/v1/events", json=payload)
+        assert response.status_code == 201
+
+    saved_alerts = db_session.scalars(select(Alert).where(Alert.scan_id == scan.id)).all()
+    assert len(saved_alerts) == 1
+    assert saved_alerts[0].rule_name == "port_scan"
 
 
 def _client_with_session(db_session: Session) -> TestClient:

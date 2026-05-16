@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models import PacketEvent, Scan
 from app.schemas import PacketEventCreate
+from app.services.detection import detect_alerts_for_event
 
 
 def create_packet_event(session: Session, payload: PacketEventCreate) -> PacketEvent:
@@ -24,6 +25,11 @@ def create_packet_event(session: Session, payload: PacketEventCreate) -> PacketE
         packet_size=payload.packet_size,
     )
     session.add(event)
+    session.flush()
+
+    alerts = detect_alerts_for_event(session=session, event=event)
+    session.add_all(alerts)
+
     session.commit()
     session.refresh(event)
     return event
