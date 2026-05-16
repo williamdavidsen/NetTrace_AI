@@ -50,6 +50,24 @@ cd backend
 .venv\Scripts\python -m alembic upgrade head
 ```
 
+## Agent Quick Start
+
+Generate deterministic sample packet metadata events:
+
+```bash
+cd agent
+..\backend\.venv\Scripts\python src\main.py --count 5
+```
+
+Send generated events to the configured backend endpoint:
+
+```bash
+cd agent
+..\backend\.venv\Scripts\python src\main.py --count 5 --send
+```
+
+Agent environment variables are listed in `.env.example`. The generated JSON contract matches the backend `PacketEvent` model fields.
+
 ## Repository Layout
 
 ```text
