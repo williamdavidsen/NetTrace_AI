@@ -43,6 +43,13 @@ cd backend
 .venv\Scripts\python -m pytest
 ```
 
+Run database migrations:
+
+```bash
+cd backend
+.venv\Scripts\python -m alembic upgrade head
+```
+
 ## Repository Layout
 
 ```text
