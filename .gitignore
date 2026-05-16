@@ -43,3 +43,6 @@ Thumbs.db
 *.pcap
 *.pcapng
 secrets/
+
+# Local planning notes
+Docs/
