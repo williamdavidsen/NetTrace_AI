@@ -68,6 +68,20 @@ cd agent
 
 Agent environment variables are listed in `.env.example`. The generated JSON contract matches the backend `PacketEvent` model fields.
 
+## Detection and Alerts
+
+The backend evaluates packet metadata as it is ingested and stores alerts for early suspicious patterns:
+
+- `sensitive_port`: traffic to SSH, Telnet, or RDP.
+- `port_scan`: one source IP touching five or more distinct destination ports in a scan.
+
+Read alerts with:
+
+```text
+GET http://localhost:8000/api/v1/alerts
+GET http://localhost:8000/api/v1/alerts?scan_id=<scan-id>
+```
+
 ## Repository Layout
 
 ```text
