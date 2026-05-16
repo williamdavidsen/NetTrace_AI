@@ -21,6 +21,28 @@ Backend, agent, frontend, infrastructure, and CI folders are intentionally separ
 - Testing: Pytest, Vitest, Playwright
 - DevOps: Docker, Docker Compose, GitHub Actions
 
+## Backend Quick Start
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m uvicorn app.main:app --reload
+```
+
+Health check:
+
+```text
+GET http://localhost:8000/health
+```
+
+Run backend tests:
+
+```bash
+cd backend
+.venv\Scripts\python -m pytest
+```
+
 ## Repository Layout
 
 ```text
