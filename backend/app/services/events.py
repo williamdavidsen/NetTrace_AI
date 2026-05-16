@@ -4,9 +4,14 @@ from sqlalchemy.orm import Session
 from app.models import PacketEvent, Scan
 from app.schemas import PacketEventCreate
 from app.services.detection import detect_alerts_for_event
+from app.streams import EventStreamPublishError, RedisEventStream
 
 
-def create_packet_event(session: Session, payload: PacketEventCreate) -> PacketEvent:
+def create_packet_event(
+    session: Session,
+    payload: PacketEventCreate,
+    event_stream: RedisEventStream,
+) -> PacketEvent:
     scan = session.get(Scan, str(payload.scan_id))
     if scan is None:
         raise HTTPException(
@@ -29,6 +34,15 @@ def create_packet_event(session: Session, payload: PacketEventCreate) -> PacketE
 
     alerts = detect_alerts_for_event(session=session, event=event)
     session.add_all(alerts)
+
+    try:
+        event_stream.publish_packet_event(event)
+    except EventStreamPublishError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Event stream unavailable.",
+        ) from exc
 
     session.commit()
     session.refresh(event)

@@ -11,6 +11,8 @@ class Settings:
         "DATABASE_URL",
         "postgresql+psycopg://nettrace:nettrace@localhost:5432/nettrace",
     )
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    redis_stream_name: str = os.getenv("REDIS_STREAM_NAME", "network_events")
 
 
 settings = Settings()

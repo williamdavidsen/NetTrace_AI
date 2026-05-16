@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.schemas import AlertResponse, PacketEventCreate, PacketEventResponse
 from app.services import create_packet_event, list_alerts
+from app.streams import RedisEventStream, get_event_stream
 
 router = APIRouter()
 
@@ -29,8 +30,9 @@ def get_status() -> dict[str, str]:
 def ingest_event(
     payload: PacketEventCreate,
     session: Session = Depends(get_session),
+    event_stream: RedisEventStream = Depends(get_event_stream),
 ) -> PacketEventResponse:
-    return create_packet_event(session=session, payload=payload)
+    return create_packet_event(session=session, payload=payload, event_stream=event_stream)
 
 
 @router.get("/alerts", response_model=list[AlertResponse])

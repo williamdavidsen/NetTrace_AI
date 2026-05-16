@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_session
 from app.main import create_app
 from app.models import Alert, PacketEvent, Scan
+from app.streams import get_event_stream
 
 
 def test_event_ingestion_saves_valid_payload(db_session: Session) -> None:
@@ -120,7 +121,11 @@ def _client_with_session(db_session: Session) -> TestClient:
     def override_get_session() -> Generator[Session, None, None]:
         yield db_session
 
+    def override_get_event_stream() -> Generator["_RecordingEventStream", None, None]:
+        yield _RecordingEventStream()
+
     app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[get_event_stream] = override_get_event_stream
     return TestClient(app)
 
 
@@ -135,3 +140,8 @@ def _valid_event_payload(scan_id: str) -> dict[str, str | int]:
         "destination_port": 443,
         "packet_size": 512,
     }
+
+
+class _RecordingEventStream:
+    def publish_packet_event(self, event: PacketEvent) -> str:
+        return f"{event.id}-0"
