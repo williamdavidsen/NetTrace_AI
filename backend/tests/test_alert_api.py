@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -13,8 +14,16 @@ def test_alerts_endpoint_lists_alerts_newest_first(db_session: Session) -> None:
     second_scan = Scan(target_name="second", status="running")
     db_session.add_all([first_scan, second_scan])
     db_session.flush()
-    first_alert = _alert(scan=first_scan, source_ip="10.0.0.1")
-    second_alert = _alert(scan=second_scan, source_ip="10.0.0.2")
+    first_alert = _alert(
+        scan=first_scan,
+        source_ip="10.0.0.1",
+        created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+    )
+    second_alert = _alert(
+        scan=second_scan,
+        source_ip="10.0.0.2",
+        created_at=datetime(2026, 1, 1, 12, 1, tzinfo=timezone.utc),
+    )
     db_session.add_all([first_alert, second_alert])
     db_session.commit()
 
@@ -67,7 +76,7 @@ def _client_with_session(db_session: Session) -> TestClient:
     return TestClient(app)
 
 
-def _alert(*, scan: Scan, source_ip: str) -> Alert:
+def _alert(*, scan: Scan, source_ip: str, created_at: datetime | None = None) -> Alert:
     return Alert(
         scan=scan,
         severity="medium",
@@ -75,4 +84,5 @@ def _alert(*, scan: Scan, source_ip: str) -> Alert:
         description="A source IP contacted SSH.",
         rule_name="sensitive_port",
         source_ip=source_ip,
+        created_at=created_at or datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
