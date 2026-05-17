@@ -33,7 +33,7 @@ def test_alerts_endpoint_lists_alerts_newest_first(db_session: Session) -> None:
     assert response.status_code == 200
     body = response.json()
     assert [alert["id"] for alert in body] == [second_alert.id, first_alert.id]
-    assert body[0]["rule_name"] == "sensitive_port"
+    assert body[0]["rule_name"] == "suspicious_port"
 
 
 def test_alerts_endpoint_filters_by_scan_id(db_session: Session) -> None:
@@ -82,7 +82,7 @@ def _alert(*, scan: Scan, source_ip: str, created_at: datetime | None = None) ->
         severity="medium",
         title="Sensitive service contacted: SSH",
         description="A source IP contacted SSH.",
-        rule_name="sensitive_port",
+        rule_name="suspicious_port",
         source_ip=source_ip,
         created_at=created_at or datetime(2026, 1, 1, tzinfo=timezone.utc),
     )

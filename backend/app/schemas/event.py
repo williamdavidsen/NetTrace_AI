@@ -5,15 +5,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-ALLOWED_PROTOCOLS = {"TCP", "UDP", "ICMP"}
-
-
 class PacketEventCreate(BaseModel):
     scan_id: UUID
     timestamp: datetime
     source_ip: str
     destination_ip: str
-    protocol: str
+    protocol: str = Field(min_length=1, max_length=20)
     source_port: int | None = Field(default=None, ge=1, le=65535)
     destination_port: int | None = Field(default=None, ge=1, le=65535)
     packet_size: int = Field(ge=1, le=65535)
@@ -27,9 +24,9 @@ class PacketEventCreate(BaseModel):
     @field_validator("protocol")
     @classmethod
     def validate_protocol(cls, value: str) -> str:
-        protocol = value.upper()
-        if protocol not in ALLOWED_PROTOCOLS:
-            raise ValueError("protocol must be TCP, UDP, or ICMP")
+        protocol = value.strip().upper()
+        if not protocol:
+            raise ValueError("protocol must not be empty")
         return protocol
 
 

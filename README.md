@@ -72,8 +72,11 @@ Agent environment variables are listed in `.env.example`. The generated JSON con
 
 The backend evaluates packet metadata as it is ingested and stores alerts for early suspicious patterns:
 
-- `sensitive_port`: traffic to SSH, Telnet, or RDP.
-- `port_scan`: one source IP touching five or more distinct destination ports in a scan.
+- `port_scan`: one source IP touching 20 or more distinct destination ports in 60 seconds.
+- `dns_spike`: one source IP generating 50 or more DNS events in 60 seconds.
+- `suspicious_port`: traffic to SSH, Telnet, SMB, or RDP.
+- `large_packet`: packet metadata above the configured large-packet threshold.
+- `unknown_protocol`: protocol values outside TCP, UDP, and ICMP.
 
 Read alerts with:
 

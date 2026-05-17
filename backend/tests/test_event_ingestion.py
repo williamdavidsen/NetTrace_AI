@@ -70,6 +70,20 @@ def test_event_ingestion_rejects_invalid_port(db_session: Session) -> None:
     assert response.status_code == 422
 
 
+def test_event_ingestion_rejects_blank_protocol(db_session: Session) -> None:
+    scan = Scan(target_name="blank-protocol", status="running")
+    db_session.add(scan)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    payload = _valid_event_payload(scan.id)
+    payload["protocol"] = "   "
+
+    response = client.post("/api/v1/events", json=payload)
+
+    assert response.status_code == 422
+
+
 def test_event_ingestion_rejects_unknown_scan(db_session: Session) -> None:
     client = _client_with_session(db_session)
     payload = _valid_event_payload("11111111-1111-1111-1111-111111111111")
@@ -79,8 +93,8 @@ def test_event_ingestion_rejects_unknown_scan(db_session: Session) -> None:
     assert response.status_code == 404
 
 
-def test_event_ingestion_creates_alert_for_sensitive_port(db_session: Session) -> None:
-    scan = Scan(target_name="sensitive-port-ingestion", status="running")
+def test_event_ingestion_creates_alert_for_suspicious_port(db_session: Session) -> None:
+    scan = Scan(target_name="suspicious-port-ingestion", status="running")
     db_session.add(scan)
     db_session.commit()
 
@@ -93,7 +107,7 @@ def test_event_ingestion_creates_alert_for_sensitive_port(db_session: Session) -
     assert response.status_code == 201
     saved_alert = db_session.scalar(select(Alert).where(Alert.scan_id == scan.id))
     assert saved_alert is not None
-    assert saved_alert.rule_name == "sensitive_port"
+    assert saved_alert.rule_name == "suspicious_port"
     assert saved_alert.source_ip == "192.168.1.10"
 
 
@@ -103,7 +117,7 @@ def test_event_ingestion_creates_port_scan_alert_at_threshold(db_session: Sessio
     db_session.commit()
 
     client = _client_with_session(db_session)
-    for port in [80, 81, 82, 83, 84]:
+    for port in range(80, 100):
         payload = _valid_event_payload(scan.id)
         payload["source_ip"] = "10.0.0.90"
         payload["destination_port"] = port
@@ -113,6 +127,61 @@ def test_event_ingestion_creates_port_scan_alert_at_threshold(db_session: Sessio
     saved_alerts = db_session.scalars(select(Alert).where(Alert.scan_id == scan.id)).all()
     assert len(saved_alerts) == 1
     assert saved_alerts[0].rule_name == "port_scan"
+
+
+def test_event_ingestion_creates_dns_spike_alert_at_threshold(db_session: Session) -> None:
+    scan = Scan(target_name="dns-spike-ingestion", status="running")
+    db_session.add(scan)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    for _ in range(50):
+        payload = _valid_event_payload(scan.id)
+        payload["source_ip"] = "10.0.0.91"
+        payload["protocol"] = "UDP"
+        payload["destination_port"] = 53
+        response = client.post("/api/v1/events", json=payload)
+        assert response.status_code == 201
+
+    saved_alerts = db_session.scalars(select(Alert).where(Alert.scan_id == scan.id)).all()
+    assert len(saved_alerts) == 1
+    assert saved_alerts[0].rule_name == "dns_spike"
+
+
+def test_event_ingestion_creates_large_packet_alert(db_session: Session) -> None:
+    scan = Scan(target_name="large-packet-ingestion", status="running")
+    db_session.add(scan)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    payload = _valid_event_payload(scan.id)
+    payload["packet_size"] = 9001
+
+    response = client.post("/api/v1/events", json=payload)
+
+    assert response.status_code == 201
+    saved_alert = db_session.scalar(select(Alert).where(Alert.scan_id == scan.id))
+    assert saved_alert is not None
+    assert saved_alert.rule_name == "large_packet"
+
+
+def test_event_ingestion_creates_unknown_protocol_alert(db_session: Session) -> None:
+    scan = Scan(target_name="unknown-protocol-ingestion", status="running")
+    db_session.add(scan)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    payload = _valid_event_payload(scan.id)
+    payload["protocol"] = "gre"
+
+    response = client.post("/api/v1/events", json=payload)
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["protocol"] == "GRE"
+    saved_alert = db_session.scalar(select(Alert).where(Alert.scan_id == scan.id))
+    assert saved_alert is not None
+    assert saved_alert.rule_name == "unknown_protocol"
 
 
 def _client_with_session(db_session: Session) -> TestClient:
