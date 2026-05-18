@@ -29,7 +29,7 @@ describe("api client", () => {
     });
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:8000/metrics",
-      expect.objectContaining({ next: { revalidate: 5 } }),
+      expect.objectContaining({ cache: "no-store" }),
     );
   });
 

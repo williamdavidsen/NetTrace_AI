@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { EmptyState } from "@/components/empty-state";
 import { EventsTable } from "@/components/events-table";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { SeverityBadge } from "@/components/severity-badge";
 import { formatDateTime } from "@/lib/format";
 import { getScan, listScanAlerts, listScanEvents } from "@/lib/api";
@@ -25,6 +26,7 @@ export default async function ScanDetailPage({ params }: ScanDetailPageProps) {
 
   return (
     <section className="page-stack">
+      <RealtimeRefresh />
       <header className="page-header">
         <p className="eyebrow">Scan detail</p>
         <h1>{scan.target_name}</h1>

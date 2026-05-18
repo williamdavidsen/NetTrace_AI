@@ -10,11 +10,11 @@ type ListOptions = {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...init?.headers,
     },
-    next: { revalidate: 5 },
   });
 
   if (!response.ok) {
