@@ -36,8 +36,12 @@ FALLBACK_EXPLANATION = {
 }
 
 
+def select_explanation_template(rule_name: str) -> dict[str, str]:
+    return EXPLANATION_TEMPLATES.get(rule_name, FALLBACK_EXPLANATION)
+
+
 def explain_alert(alert: Alert) -> dict[str, str]:
-    template = EXPLANATION_TEMPLATES.get(alert.rule_name, FALLBACK_EXPLANATION)
+    template = select_explanation_template(alert.rule_name)
     return {
         "alert_id": alert.id,
         "rule_name": alert.rule_name,
