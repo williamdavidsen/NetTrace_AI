@@ -3,9 +3,15 @@ from app.models import Alert
 
 EXPLANATION_TEMPLATES = {
     "port_scan": {
-        "summary": "This alert suggests one source contacted many destination ports in a short time window.",
-        "pattern": "Port scanning often appears as repeated connection attempts from one source to many ports.",
-        "recommended_action": "Inspect the source host and restrict unnecessary exposed services.",
+        "summary": "A single source contacted many destination ports in a short time window.",
+        "pattern": (
+            "This pattern is commonly associated with port scanning, where a host probes multiple ports "
+            "to discover exposed services before a possible follow-up attempt."
+        ),
+        "recommended_action": (
+            "Review the source host, check whether the activity was expected scanning, and restrict or "
+            "firewall unnecessary exposed services."
+        ),
     },
     "dns_spike": {
         "summary": "This alert suggests an unusual burst of DNS activity from one source.",
