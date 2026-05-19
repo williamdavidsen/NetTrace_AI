@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -64,6 +65,35 @@ def test_alerts_endpoint_rejects_invalid_scan_filter(db_session: Session) -> Non
     response = client.get("/api/v1/alerts?scan_id=not-a-uuid")
 
     assert response.status_code == 422
+
+
+def test_alert_explanation_endpoint_returns_explanation(db_session: Session) -> None:
+    scan = Scan(target_name="scan-with-alert", status="running")
+    db_session.add(scan)
+    db_session.flush()
+    alert = _alert(scan=scan, source_ip="10.0.0.10")
+    db_session.add(alert)
+    db_session.commit()
+
+    client = _client_with_session(db_session)
+    response = client.get(f"/api/v1/alerts/{alert.id}/explanation")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["alert_id"] == alert.id
+    assert body["rule_name"] == "suspicious_port"
+    assert body["summary"]
+    assert body["pattern"]
+    assert body["recommended_action"]
+
+
+def test_alert_explanation_endpoint_returns_404_for_missing_alert(db_session: Session) -> None:
+    client = _client_with_session(db_session)
+
+    response = client.get(f"/api/v1/alerts/{uuid4()}/explanation")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Alert not found."
 
 
 def _client_with_session(db_session: Session) -> TestClient:
