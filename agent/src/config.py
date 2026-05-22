@@ -10,6 +10,10 @@ class AgentConfig:
     request_timeout_seconds: float = 5.0
     default_event_count: int = 10
     random_seed: int = 42
+    capture_mode: str = "sample"
+    capture_interface: str | None = None
+    capture_filter: str = "ip or ip6"
+    capture_timeout_seconds: int | None = None
 
     @property
     def event_url(self) -> str:
@@ -32,4 +36,19 @@ def load_config() -> AgentConfig:
             os.getenv("NETTRACE_AGENT_EVENT_COUNT", os.getenv("AGENT_EVENT_COUNT", "10"))
         ),
         random_seed=int(os.getenv("NETTRACE_AGENT_RANDOM_SEED", "42")),
+        capture_mode=os.getenv(
+            "NETTRACE_AGENT_CAPTURE_MODE",
+            os.getenv("AGENT_CAPTURE_MODE", "sample"),
+        ),
+        capture_interface=os.getenv("NETTRACE_AGENT_CAPTURE_INTERFACE") or None,
+        capture_filter=os.getenv("NETTRACE_AGENT_CAPTURE_FILTER", "ip or ip6"),
+        capture_timeout_seconds=_optional_int(
+            os.getenv("NETTRACE_AGENT_CAPTURE_TIMEOUT_SECONDS")
+        ),
     )
+
+
+def _optional_int(value: str | None) -> int | None:
+    if value is None or value == "":
+        return None
+    return int(value)
