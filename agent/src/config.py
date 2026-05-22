@@ -7,6 +7,7 @@ class AgentConfig:
     backend_url: str
     scan_id: str
     event_endpoint: str = "/api/v1/events"
+    scan_endpoint: str = "/api/v1/scans"
     request_timeout_seconds: float = 5.0
     default_event_count: int = 10
     random_seed: int = 42
@@ -14,10 +15,15 @@ class AgentConfig:
     capture_interface: str | None = None
     capture_filter: str = "ip or ip6"
     capture_timeout_seconds: int | None = None
+    scan_target_name: str = "docker-compose-agent"
 
     @property
     def event_url(self) -> str:
         return f"{self.backend_url.rstrip('/')}{self.event_endpoint}"
+
+    @property
+    def scan_url(self) -> str:
+        return f"{self.backend_url.rstrip('/')}{self.scan_endpoint}"
 
 
 def load_config() -> AgentConfig:
@@ -31,6 +37,7 @@ def load_config() -> AgentConfig:
             os.getenv("AGENT_SCAN_ID", "00000000-0000-0000-0000-000000000001"),
         ),
         event_endpoint=os.getenv("NETTRACE_EVENT_ENDPOINT", "/api/v1/events"),
+        scan_endpoint=os.getenv("NETTRACE_SCAN_ENDPOINT", "/api/v1/scans"),
         request_timeout_seconds=float(os.getenv("NETTRACE_AGENT_TIMEOUT_SECONDS", "5")),
         default_event_count=int(
             os.getenv("NETTRACE_AGENT_EVENT_COUNT", os.getenv("AGENT_EVENT_COUNT", "10"))
@@ -45,6 +52,7 @@ def load_config() -> AgentConfig:
         capture_timeout_seconds=_optional_int(
             os.getenv("NETTRACE_AGENT_CAPTURE_TIMEOUT_SECONDS")
         ),
+        scan_target_name=os.getenv("NETTRACE_AGENT_SCAN_TARGET_NAME", "docker-compose-agent"),
     )
 
 

@@ -51,3 +51,26 @@ def test_sender_posts_event_json(monkeypatch) -> None:
     assert captured["timeout"] == 2
     assert captured["content_type"] == "application/json"
     assert captured["body"]["destination_port"] == 53
+
+
+def test_sender_creates_scan(monkeypatch) -> None:
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse({"id": "scan-1", "target_name": "compose"})
+
+    monkeypatch.setattr(sender, "urlopen", fake_urlopen)
+
+    response = EventSender(
+        "http://localhost:8000/api/v1/events",
+        timeout_seconds=2,
+        scan_url="http://localhost:8000/api/v1/scans",
+    ).create_scan("compose")
+
+    assert response["id"] == "scan-1"
+    assert captured["url"] == "http://localhost:8000/api/v1/scans"
+    assert captured["timeout"] == 2
+    assert captured["body"] == {"target_name": "compose"}

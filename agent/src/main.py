@@ -21,6 +21,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--count", type=int, help="Number of metadata events to emit.")
     parser.add_argument("--send", action="store_true", help="POST generated events to the backend.")
+    parser.add_argument(
+        "--create-scan",
+        action="store_true",
+        help="Create a backend scan first and use its id for emitted events.",
+    )
+    parser.add_argument("--scan-target", help="Target name used with --create-scan.")
     parser.add_argument("--interface", help="Network interface for capture mode.")
     parser.add_argument("--filter", help="BPF capture filter for capture mode.")
     parser.add_argument("--timeout", type=int, help="Capture timeout in seconds.")
@@ -34,10 +40,20 @@ def main() -> None:
     mode = args.mode or config.capture_mode
     if mode not in {"sample", "capture"}:
         raise SystemExit("Capture mode must be either 'sample' or 'capture'.")
+    sender = EventSender(
+        config.event_url,
+        timeout_seconds=config.request_timeout_seconds,
+        scan_url=config.scan_url,
+    )
+    scan_id = config.scan_id
+
+    if args.create_scan:
+        scan = sender.create_scan(args.scan_target or config.scan_target_name)
+        scan_id = str(scan["id"])
 
     if mode == "capture":
         capture_config = PacketCaptureConfig(
-            scan_id=config.scan_id,
+            scan_id=scan_id,
             interface=args.interface or config.capture_interface,
             packet_filter=args.filter or config.capture_filter,
             count=count,
@@ -48,11 +64,10 @@ def main() -> None:
         except (PacketCaptureDependencyError, PacketCapturePermissionError) as exc:
             raise SystemExit(str(exc)) from exc
     else:
-        generator = SampleEventGenerator(scan_id=config.scan_id, seed=config.random_seed)
+        generator = SampleEventGenerator(scan_id=scan_id, seed=config.random_seed)
         events = generator.generate(count)
 
     if args.send:
-        sender = EventSender(config.event_url, timeout_seconds=config.request_timeout_seconds)
         for event in events:
             print(json.dumps(sender.send(event), sort_keys=True))
         return
