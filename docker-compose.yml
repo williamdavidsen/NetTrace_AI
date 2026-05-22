@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nettrace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nettrace}
+      POSTGRES_DB: ${POSTGRES_DB:-nettrace}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      SERVICE_NAME: ${SERVICE_NAME:-nettrace-backend}
+      API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-nettrace}:${POSTGRES_PASSWORD:-nettrace}@postgres:5432/${POSTGRES_DB:-nettrace}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_NAME: ${REDIS_STREAM_NAME:-network_events}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  agent:
+    build:
+      context: ./agent
+    environment:
+      NETTRACE_BACKEND_URL: http://backend:8000
+      NETTRACE_AGENT_EVENT_COUNT: ${NETTRACE_AGENT_EVENT_COUNT:-10}
+      NETTRACE_AGENT_RANDOM_SEED: ${NETTRACE_AGENT_RANDOM_SEED:-42}
+      NETTRACE_AGENT_SCAN_TARGET_NAME: docker-compose-agent
+    command:
+      [
+        "sh",
+        "-c",
+        "python src/main.py --create-scan --count ${NETTRACE_AGENT_EVENT_COUNT:-10} --send",
+      ]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:
