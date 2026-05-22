@@ -68,6 +68,21 @@ cd agent
 
 Agent environment variables are listed in `.env.example`. The generated JSON contract matches the backend `PacketEvent` model fields.
 
+## Docker Compose Quick Start
+
+Run the full local stack with one command:
+
+```bash
+docker compose up --build
+```
+
+The compose environment starts PostgreSQL, Redis, the FastAPI backend, the Next.js frontend, and a one-shot sample agent that creates a scan and sends packet metadata events to the backend.
+
+Default local URLs:
+
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:3000`
+
 ## Detection and Alerts
 
 The backend evaluates packet metadata as it is ingested and stores alerts for early suspicious patterns:
