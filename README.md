@@ -43,6 +43,14 @@ cd backend
 .venv\Scripts\python -m pytest
 ```
 
+Run end-to-end tests against Docker Compose:
+
+```bash
+cd e2e
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
 Run database migrations:
 
 ```bash
