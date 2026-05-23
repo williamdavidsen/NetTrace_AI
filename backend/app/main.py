@@ -1,4 +1,5 @@
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.api.v1.router import router as api_v1_router
@@ -13,6 +14,13 @@ def create_app() -> FastAPI:
         title="NetTrace AI Backend",
         version="0.1.0",
         description="Backend API for NetTrace AI.",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_origins),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+        allow_headers=["Content-Type"],
     )
 
     @app.get("/health")
