@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
 from app.core.errors import http_exception_handler, validation_exception_handler
+from app.core.observability import configure_logging, request_observability_middleware
 from app.core.rate_limit import InMemoryRateLimiter
 from app.db.session import get_session
 from app.schemas import MetricsResponse
@@ -14,11 +15,13 @@ from app.services import get_metrics
 
 
 def create_app() -> FastAPI:
+    configure_logging(settings.log_level)
     app = FastAPI(
         title="NetTrace AI Backend",
         version="0.1.0",
         description="Backend API for NetTrace AI.",
     )
+    app.middleware("http")(request_observability_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),

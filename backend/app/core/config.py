@@ -10,6 +10,7 @@ def _csv(value: str) -> tuple[str, ...]:
 class Settings:
     service_name: str = os.getenv("SERVICE_NAME", "nettrace-backend")
     app_env: str = os.getenv("APP_ENV", "development")
+    log_level: str = os.getenv("LOG_LEVEL", "info")
     api_v1_prefix: str = os.getenv("API_V1_PREFIX", "/api/v1")
     database_url: str = os.getenv(
         "DATABASE_URL",
