@@ -93,7 +93,7 @@ def test_alert_explanation_endpoint_returns_404_for_missing_alert(db_session: Se
     response = client.get(f"/api/v1/alerts/{uuid4()}/explanation")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Alert not found."
+    assert response.json()["error"]["message"] == "Alert not found."
 
 
 def _client_with_session(db_session: Session) -> TestClient:

@@ -66,7 +66,7 @@ def test_event_ingestion_rolls_back_when_redis_publish_fails(db_session: Session
     response = client.post("/api/v1/events", json=_valid_event_payload(scan.id))
 
     assert response.status_code == 503
-    assert response.json()["detail"] == "Event stream unavailable."
+    assert response.json()["error"]["message"] == "Event stream unavailable."
     saved_events = db_session.scalars(select(PacketEvent).where(PacketEvent.scan_id == scan.id)).all()
     assert saved_events == []
 
