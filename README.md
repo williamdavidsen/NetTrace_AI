@@ -142,3 +142,9 @@ scripts/      Local project automation such as secret scanning
 - Add optional WebSocket or Server-Sent Events updates after the polling baseline.
 - Add authentication and role-based access once the local V1 system is complete.
 - Add richer observability dashboards for request latency, detection counts, and rate-limit events.
+
+## Release
+
+Current release target: `v1.0.0`.
+
+See [CHANGELOG.md](CHANGELOG.md) and [Docs/Release.md](Docs/Release.md) for release notes and final verification details.
