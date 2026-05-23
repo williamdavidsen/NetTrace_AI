@@ -28,5 +28,8 @@ jobs:
       - name: Lint backend
         run: python -m compileall -q app tests
 
+      - name: Scan tracked files for secrets
+        run: python ../scripts/scan_secrets.py
+
       - name: Test backend
         run: python -m pytest
