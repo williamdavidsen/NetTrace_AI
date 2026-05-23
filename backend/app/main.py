@@ -1,9 +1,13 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
+from app.core.errors import http_exception_handler, validation_exception_handler
+from app.core.rate_limit import InMemoryRateLimiter
 from app.db.session import get_session
 from app.schemas import MetricsResponse
 from app.services import get_metrics
@@ -22,6 +26,15 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
         allow_headers=["Content-Type"],
     )
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    if settings.rate_limit_enabled:
+        app.add_middleware(
+            InMemoryRateLimiter,
+            requests=settings.rate_limit_requests,
+            window_seconds=settings.rate_limit_window_seconds,
+        )
 
     @app.get("/health")
     def health_check() -> dict[str, str]:
