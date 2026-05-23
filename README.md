@@ -1,140 +1,122 @@
 # NetTrace AI
 
-NetTrace AI is a real-time network intelligence platform that collects packet metadata, processes events through a backend pipeline, detects suspicious traffic patterns, and presents alerts in a dashboard.
+NetTrace AI is a local, end-to-end network intelligence platform. A Python agent produces packet metadata, a FastAPI backend validates and stores it, Redis Streams carry events through the pipeline, rule-based detection generates alerts, and a Next.js dashboard shows what happened in near real time.
 
-The first version focuses on a complete local system:
+![NetTrace AI demo](media/demo/nettrace-ai-demo.gif)
 
-```text
-Agent -> Backend API -> PostgreSQL + Redis Stream -> Detection Engine -> Alert API -> Dashboard
-```
-
-## Project Structure
-
-Backend, agent, frontend, infrastructure, and CI folders are intentionally separated so each part of the system has a clear responsibility.
-
-## Planned Tech Stack
-
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy/SQLModel, Alembic, Pytest
-- Agent: Python
-- Data layer: PostgreSQL, Redis Streams
-- Frontend: Next.js, TypeScript, React
-- Testing: Pytest, Vitest, Playwright
-- DevOps: Docker, Docker Compose, GitHub Actions
-
-## Backend Quick Start
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python -m uvicorn app.main:app --reload
-```
-
-Health check:
+## What It Shows
 
 ```text
-GET http://localhost:8000/health
+Agent -> FastAPI -> PostgreSQL + Redis Streams -> Detection Engine -> Alert API -> Next.js Dashboard
 ```
 
-Run backend tests:
+- Metadata-only packet collection with no payload storage.
+- Validated event ingestion through FastAPI and Pydantic.
+- PostgreSQL models and Alembic migrations for scans, events, and alerts.
+- Redis Stream publishing for the event pipeline.
+- Rule-based anomaly detection for port scans, DNS spikes, sensitive ports, large packets, and unknown protocols.
+- Alert explanation endpoint with readable recommended actions.
+- Dashboard views for scan history, event activity, alert severity, protocol distribution, and active sources.
+- Docker Compose stack for backend, frontend, PostgreSQL, Redis, and agent.
+- Unit, integration, E2E, CI, rate limiting, CORS, safe API errors, and tracked-file secret scanning.
 
-```bash
-cd backend
-.venv\Scripts\python -m pytest
-```
+## Screenshots
 
-Run end-to-end tests against Docker Compose:
+| Live dashboard | Scan detail |
+| --- | --- |
+| ![Dashboard](media/screenshots/dashboard.png) | ![Scan detail](media/screenshots/scan-detail.png) |
 
-```bash
-cd e2e
-python -m pip install -r requirements.txt
-python -m pytest
-```
+| Scan inventory |
+| --- |
+| ![Scans](media/screenshots/scans.png) |
 
-Run database migrations:
+## How It Works
 
-```bash
-cd backend
-.venv\Scripts\python -m alembic upgrade head
-```
+The agent can either generate deterministic sample traffic or parse live packet metadata with Scapy. Each event is posted to the backend, validated, written to PostgreSQL, published to `network_events` in Redis, evaluated by the detection service, and exposed to the dashboard through query APIs. The dashboard polls for updates, so new events and alerts appear without a manual refresh.
 
-## Agent Quick Start
+## What I Learned
 
-Generate deterministic sample packet metadata events:
+I built this project in small, deliberate phases so I could understand each layer instead of just wiring tools together. I started with a clean repository structure, then added the backend foundation, database migrations, agent event contracts, Redis streaming, detection rules, frontend integration, Docker, E2E tests, CI, and security hardening. The biggest learning was how production-style systems are shaped by boundaries: validation at the API edge, clear data models, repeatable migrations, isolated tests, observable flows, and privacy rules that are enforced by design rather than written as an afterthought.
 
-```bash
-cd agent
-..\backend\.venv\Scripts\python src\main.py --count 5
-```
+## Tech Stack
 
-Send generated events to the configured backend endpoint:
+- **Backend:** Python, FastAPI, Pydantic, SQLAlchemy, Alembic, Pytest
+- **Agent:** Python, Scapy, deterministic sample event generator
+- **Data:** PostgreSQL, Redis Streams
+- **Frontend:** Next.js, React, TypeScript, Vitest
+- **DevOps:** Docker, Docker Compose, GitHub Actions
+- **Security:** CORS allowlist, rate limiting, safe error responses, secret scan
 
-```bash
-cd agent
-..\backend\.venv\Scripts\python src\main.py --count 5 --send
-```
+## Quick Start
 
-Agent environment variables are listed in `.env.example`. The generated JSON contract matches the backend `PacketEvent` model fields.
-
-## Docker Compose Quick Start
-
-Run the full local stack with one command:
+Run the full stack:
 
 ```bash
 docker compose up --build
 ```
 
-The compose environment starts PostgreSQL, Redis, the FastAPI backend, the Next.js frontend, and a one-shot sample agent that creates a scan and sends packet metadata events to the backend.
-
-Default local URLs:
-
-- Backend: `http://localhost:8000`
-- Frontend: `http://localhost:3000`
-
-## Detection and Alerts
-
-The backend evaluates packet metadata as it is ingested and stores alerts for early suspicious patterns:
-
-- `port_scan`: one source IP touching 20 or more distinct destination ports in 60 seconds.
-- `dns_spike`: one source IP generating 50 or more DNS events in 60 seconds.
-- `suspicious_port`: traffic to SSH, Telnet, SMB, or RDP.
-- `large_packet`: packet metadata above the configured large-packet threshold.
-- `unknown_protocol`: protocol values outside TCP, UDP, and ICMP.
-
-Read alerts with:
+Open:
 
 ```text
-GET http://localhost:8000/api/v1/alerts
-GET http://localhost:8000/api/v1/alerts?scan_id=<scan-id>
+Frontend: http://localhost:3000
+Backend:  http://localhost:8000
+Health:   http://localhost:8000/health
+Metrics:  http://localhost:8000/metrics
 ```
+
+The compose stack starts PostgreSQL, Redis, the backend, the frontend, and a one-shot agent that creates a scan and sends sample packet metadata.
+
+## Test Commands
+
+```bash
+cd backend
+python -m pytest
+```
+
+```bash
+cd agent
+python -m pytest
+```
+
+```bash
+cd frontend
+npm test
+npm run lint
+```
+
+```bash
+cd e2e
+python -m pytest
+```
+
+```bash
+python scripts/scan_secrets.py
+```
+
+## API Examples
+
+```text
+GET  /health
+GET  /metrics
+POST /api/v1/scans
+GET  /api/v1/scans
+POST /api/v1/events
+GET  /api/v1/alerts
+GET  /api/v1/alerts/{alert_id}/explanation
+```
+
+## Privacy And Security
+
+NetTrace AI stores metadata only: timestamps, IPs, ports, protocol, packet size, and scan IDs. It does not store packet payloads or inspect encrypted content. The backend rejects invalid payloads, rate-limits clients, restricts CORS origins, returns safe error responses, and scans tracked files for common secret patterns in CI.
 
 ## Repository Layout
 
 ```text
-backend/      FastAPI backend, database models, services, workers, tests
-agent/        Network metadata collector and event sender
-frontend/     Next.js dashboard
-infra/        Docker Compose and infrastructure files
+backend/      FastAPI API, models, services, migrations, tests
+agent/        Metadata generator, capture parser, sender, tests
+frontend/     Next.js dashboard, components, API client, tests
+e2e/          Docker Compose based end-to-end tests
+media/        README demo GIF and screenshots
+scripts/      Local project automation such as secret scanning
 .github/      GitHub Actions workflows
 ```
-
-## Development Workflow
-
-Branch strategy:
-
-- `main`: stable release branch
-- `develop`: integration branch for active development
-- `feature/*`: isolated feature or phase branches
-
-Commit message standard:
-
-- `feat:` new feature
-- `fix:` bug fix
-- `test:` tests
-- `refactor:` code cleanup without behavior changes
-- `chore:` maintenance/configuration
-- `ci:` CI/CD changes
-
-## Privacy Note
-
-NetTrace AI is designed to collect metadata only. Full packet payloads, encrypted content, and sensitive secrets are outside the first version scope.
