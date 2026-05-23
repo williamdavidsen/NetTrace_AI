@@ -6,8 +6,15 @@ NetTrace AI is a local, end-to-end network intelligence platform. A Python agent
 
 ## What It Shows
 
-```text
-Agent -> FastAPI -> PostgreSQL + Redis Streams -> Detection Engine -> Alert API -> Next.js Dashboard
+```mermaid
+flowchart LR
+  Agent[Python Agent] --> API[FastAPI Backend]
+  API --> Postgres[(PostgreSQL)]
+  API --> Redis[(Redis Stream)]
+  Redis --> Detection[Rule Detection]
+  Detection --> Alerts[Alert API]
+  Alerts --> Dashboard[Next.js Dashboard]
+  Postgres --> Dashboard
 ```
 
 - Metadata-only packet collection with no payload storage.
@@ -105,6 +112,14 @@ GET  /api/v1/alerts
 GET  /api/v1/alerts/{alert_id}/explanation
 ```
 
+## Documentation
+
+- [Architecture](Docs/Architecture.md)
+- [API](Docs/Api.md)
+- [Testing](Docs/Testing.md)
+- [Security](Docs/Security.md)
+- [Build Report](Docs/Report.md)
+
 ## Privacy And Security
 
 NetTrace AI stores metadata only: timestamps, IPs, ports, protocol, packet size, and scan IDs. It does not store packet payloads or inspect encrypted content. The backend rejects invalid payloads, rate-limits clients, restricts CORS origins, returns safe error responses, and scans tracked files for common secret patterns in CI.
@@ -120,3 +135,10 @@ media/        README demo GIF and screenshots
 scripts/      Local project automation such as secret scanning
 .github/      GitHub Actions workflows
 ```
+
+## Future Improvements
+
+- Move rate limiting counters from process memory to Redis for multi-instance deployments.
+- Add optional WebSocket or Server-Sent Events updates after the polling baseline.
+- Add authentication and role-based access once the local V1 system is complete.
+- Add richer observability dashboards for request latency, detection counts, and rate-limit events.

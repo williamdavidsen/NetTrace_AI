@@ -33,9 +33,6 @@ pnpm-debug.log*
 tmp/
 temp/
 
-# Local project notes
-Docs/
-
 # OS / editor
 .DS_Store
 Thumbs.db
